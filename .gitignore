@@ -3,7 +3,7 @@ node_modules/
 .rpt2*
 .rts2*
 
-dist/
+# dist/
 happo-snapshots/
 extensions.json
 coverage
