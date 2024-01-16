@@ -47,6 +47,9 @@ const myText = new TaggedText(
     }
   },
 
+  // TaggedTextOptions
+  {},
+
   // PIXI.IBitmapFontOptions:
   {
     chars: PIXI.BitmapFont.ASCII, // Generate font glyphs for all ASCII characters.
@@ -54,7 +57,10 @@ const myText = new TaggedText(
   },
 
   // BitmapTextBehavior:
-  'always'
+  'always',                       // Always generate a font (default).
+
+  // Texture:
+  undefined
 );
 ```
 
