@@ -1,17 +1,17 @@
 {
   "name": "pixi-tagged-text",
-  "version": "3.14.0",
-  "description": "TaggedText for pixi.js",
-  "author": "Mims Wright, JT Smith, tleunen",
+  "version": "1.0.0",
+  "description": "A production-ready fork of TaggedText for pixi.js",
+  "author": "Reece Como, Mims Wright, JT Smith, tleunen",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mimshwright/pixi-tagged-text.git"
+    "url": "git://github.com/reececomo/pixi-tagged-text.git"
   },
   "bugs": {
-    "url": "https://github.com/mimshwright/pixi-tagged-text/issues"
+    "url": "https://github.com/reececomo/pixi-tagged-text/issues"
   },
-  "homepage": "https://github.com/mimshwright/pixi-tagged-text",
+  "homepage": "https://github.com/reececomo/pixi-tagged-text",
   "source": "./src/index.ts",
   "main": "./dist/pixi-tagged-text.js",
   "umd:main": "./dist/pixi-tagged-text.umd.js",
@@ -48,14 +48,11 @@
     "@typescript-eslint/parser": "^5.54.1",
     "ansi-regex": "^6.0.1",
     "canvas": "^2.10.2",
-    "commitizen": "^4.2.4",
-    "cz-conventional-changelog": "3.3.0",
     "electron": "^23.1.3",
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^4.0.0",
     "http-server": "^14.0.0",
-    "husky": "^8.0.1",
     "install-peers-cli": "^2.2.0",
     "jest": "^26.6.3",
     "jest-canvas-mock": "^2.3.1",
@@ -70,7 +67,7 @@
     "typescript": "^4.2.4"
   },
   "scripts": {
-    "prepare": "install-peers && husky install",
+    "prepare": "install-peers",
     "dev": "microbundle watch -f umd --name TaggedText --external 'pixi.js' --globals 'pixi.js'=PIXI",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -80,20 +77,6 @@
     "lint:eslint": "eslint ./src/**/*.ts",
     "lint:prettier": "prettier ./**/*.{ts,js,json,html,css,md} -l",
     "fix:prettier": "prettier ./**/*.{ts,js,json,html,css,md} -w",
-    "fix:changelog": "prettier CHANGELOG.md -w && git add CHANGELOG.md",
-    "lint": "npm run lint:prettier && npm run lint:eslint",
-    "pre-commit": "npm run fix:changelog && npm run lint && npm run test",
-    "commit": "cz",
-    "commit-retry": "cz --retry",
-    "ci": "cz",
-    "cinv": "cz --no-verify",
-    "cirr": "cz --retry",
-    "prepublishOnly": "npm run build",
-    "release": "standard-version"
-  },
-  "config": {
-    "commitizen": {
-      "path": "./node_modules/cz-conventional-changelog"
-    }
+    "lint": "npm run lint:prettier && npm run lint:eslint"
   }
 }
