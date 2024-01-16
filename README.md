@@ -1,16 +1,158 @@
-# pixi-tagged-text
+# PIXI TaggedText
 
-[![NPM](https://nodei.co/npm/pixi-tagged-text.png)](https://nodei.co/npm/pixi-tagged-text/)
+This project is a fork of [pixi-tagged-text stable v3.14.0](https://nodei.co/npm/pixi-tagged-text/) that is designed to accomodate production projects utilizing [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.BitmapText.html).
 
-`TaggedText` is a multi-style text component for [pixi.js](https://github.com/GoodBoyDigital/pixi.js) that supports multiple `TextStyle`s using HTML-like tags. Includes many additional features not found in `PIXI.Text` such as embedded images (sprites), underlines, justified layout, and more.
+## Differences from [mimshwright/pixi-tagged-text](https://github.com/mimshwright/pixi-tagged-text)?
+
+Out of the box, the `TaggedText` will generate a `PIXI.Text` for each word. For larger blocks of text, this can lead to a very significant performance bottleneck as the main thread is blocked while textures are uploaded to the GPU.
+
+What this fork does differently is:
+ - Adds support for `PIXI.BitmapText` in the underlying model.
+ - Exposes `TaggedText.createTextField(...)` so you can configure `PIXI.BitmapText`.
+
+### Caveats
+
+[PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.BitmapText.html) has huge performance benefits, but that comes with a few trade-offs:
+
+- Support for characters like Emoji, or languages like Chinese, Japanese or Korean that have a large number of characters.
+
+## Examples
+
+### Basic usage
+
+```typescript
+export class BitmapTaggedText extends TaggedText {
+
+  /**
+   * Implement `createTextField(...)` to return `PIXI.BitmapText` instead of `PIXI.Text`.
+   */
+  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
+    return new PIXI.BitmapText(text, { fontName: 'MyCustomBitmapFont' });
+  }
+}
+```
+
+You will need to manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) fonts (i.e. preload from files, or dynamically generate and cache), while still retaining all the other benefits of mixed XML-like tags.
+
+For production projects, you will most likely want to preload, but here is a quick example of how you might use it to generate new fonts on the fly:
+
+### Dynamically generate BitmapFont
+
+```typescript
+export class BitmapTaggedText extends TaggedText {
+
+  /**
+   * Implement `createTextField(...)` to return `PIXI.BitmapText` instead of `PIXI.Text`.
+   */
+  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
+    const fontName = this._getOrCreateBitmapFont(style);
+
+    return new PIXI.BitmapText(text, { fontName });
+  }
+
+  /**
+   * Generates a new BitmapFont on demand.
+   *
+   * @returns The `fontName` to load in `new PIXI.BitmapText(text, options)`.
+   */
+  private _getOrCreateBitmapFont(style: Partial<PIXI.ITextStyle>): string {
+    // Give the font a unique, deterministic name.
+    const fontName = md5(JSON.stringify(style));
+
+    // Generate, if it doesn't already exist.
+    if (!(fontName in BitmapFont.available)) {
+    // 🚨 Caution: This will block the main thread while uploading to the GPU.
+      BitmapFont.from(fontName, style);
+    }
+
+    return fontName;
+  }
+}
+```
+
+### Support preloaded/file-based BitmapFonts, and dynamically generate all others:
+ 
+```typescript
+export class BitmapTaggedText extends TaggedText {
+  /**
+   * Implement `createTextField(...)` to return `PIXI.BitmapText` instead of `PIXI.Text`.
+   */
+  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
+    const fontName = (typeof style.fontFamily === 'string' && fontName in BitmapFont.available)
+      // Prefer an explitly named font if we have preloaded it.
+      // 🚨 Caution: This will disregard most of `style`.
+      ? style.fontFamily
+      // Otherwise, generate on the fly from `style`.
+      : this._getOrCreateBitmapFont(style);
+
+    return new PIXI.BitmapText(text, {
+      fontName,
+      // Some style attributes can be automatically mapped to pre-generated font, for example
+      // if you wanted to change the color tint, or alignment of a font which was loaded via a file.
+      ...this._mapSupportedDynamicBitmapTextStyles(text),
+    });
+  }
+
+  /** see previous example */
+  private _getOrCreateBitmapFont(style: Partial<PIXI.ITextStyle>): string {
+    /** ... */
+  }
+
+  /**
+   * Some config can be dynamically-set for PIXI.BitmapText from their PIXI.Text equivalents.
+   */
+  private _mapSupportedDynamicBitmapTextStyles(style: Partial<PIXI.ITextStyle>): Partial<PIXI.IBitmapTextStyle> {
+    return {
+      fontSize: typeof style.fontSize === 'number' ? style.fontSize : undefined,
+      letterSpacing: style.letterSpacing ?? 1,
+      maxWidth: style.wordWrapWidth,
+      align: style.align,
+      tint: (typeof style.fill === 'number' || typeof style.fill === 'string') ? style.fill : 0xFFFFFF,
+    };
+  }
+}
+```
+
+
+### Support both Pixi.Text and Pixi.BitmapText
+ 
+```typescript
+export class MyTaggedText extends TaggedText {
+
+  /**
+   * Prefer `PIXI.BitmapFont` and fall back to PIXI.Text.
+   */
+  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText | PIXI.Text {
+    // Use a BitmapText if the given fontFamily is the name of a loaded BitmapFont.
+    if (typeof style.fontFamily === 'string' && style.fontFamily in BitmapFont.available) {
+      return new PIXI.BitmapText(text, { fontName: style.fontFamily });
+    }
+    
+    // Everything else, use PIXI.Text.
+    return new PIXI.Text(text, style);
+  }
+}
+```
+
+Make sure to check-out the docs for [PIXI.IBitmapFontOptions](https://pixijs.download/dev/docs/PIXI.IBitmapFontOptions.html).
+
+## About
+
+`TaggedText` is a multi-style text component for [pixi.js](https://github.com/pixijs/pixijs) that supports multiple `TextStyle`s using XML-like tags. Includes many additional features not found in `PIXI.Text` such as embedded images (sprites), underlines, justified layout, and more.
 
 Inspired by the original [pixi-multistyle-text](https://github.com/tleunen/pixi-multistyle-text)
 
 ## Usage
 
-```javascript
+```ts
 // constructor
-new TaggedText(text, styles, options);
+const myText = new TaggedText(
+  "<b>Hello there, </b> <name>Andrew</name>",
+  {
+
+  },
+  options
+);
 ```
 
 - `text` - A string containing the text to display. The text can be decorated with tags just like html.
@@ -33,7 +175,7 @@ You can get the text with tags stripped out with the `.untaggedText` implicit ge
 
 #### Tags
 
-- Tags are html-like, e.g. `Normal text. <bold>Bold text</bold>`
+- Tags are XML-like, e.g. `Normal text. <bold>Bold text</bold>`
 - Self-closing tags are ok e.g. `<img />`
 - Nesting tags is supported. Closing tags must match in a FILO order as opening tags. `<b>bold <i>bold italic</i></b>`
 - Attibutes added to tags will override any existing styles on the tag. `<b>bold</b> <b fontStyle="italic">bold italic</b>`
