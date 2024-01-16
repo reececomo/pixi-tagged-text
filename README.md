@@ -6,18 +6,15 @@ It allows you to use [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.Bit
 
 ## Differences from [mimshwright/pixi-tagged-text](https://github.com/mimshwright/pixi-tagged-text)
 
-- Adds optional support for generating `PIXI.BitmapText` as the underlying text node.
-  - bitmapFontOptions:
+- Adds support for generating `PIXI.BitmapText` as the underlying text node (default behavior).
+- Adds new constructor arguments:
+  - bitmapFontOptions (default: `TaggedText.DEFAULT_BITMAP_FONT_OPTIONS`)
     - See [PIXI.IBitmapFontOptions](https://pixijs.download/dev/docs/PIXI.IBitmapFontOptions.html).
-    - Defaults to `TaggedText.DEFAULT_BITMAP_FONT_OPTIONS`
-  - bitmapTextBehavior:
+  - bitmapTextBehavior (default: `TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR`)
     - Options:
-      - `'always'` - Always uses `PIXI.BitmapText`, generating `PIXI.BitmapFont` if missing.
-      - `'prefer'` - Uses `PIXI.BitmapFont` when a `PIXI.BitmapFont` exists, or uses `PIXI.Text` when none exist.
+      - `'always'` - Always uses `PIXI.BitmapText`, generates fonts as needed.
+      - `'prefer'` - Uses `PIXI.BitmapFont` if a bitmap font is loaded, falls back to `PIXI.Text`.
       - `'disabled'` - Always uses `PIXI.Text`.
-    - Defaults to `TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR`
-
-- Add support for optionally returning `PIXI.BitmapText` OR `PIXI.Text` in `TaggedText.createTextField(...)`.
 
 ## Basic usage
 
@@ -26,6 +23,27 @@ It allows you to use [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.Bit
 By default, TaggedText will automatically generate and cache BitmapFonts for you.
 
 > Note: Generating fonts dynamically carries some performance overhead as the textures are immediately uploaded to the GPU.
+
+```typescript
+const myText = new TaggedText(text, {
+  default: {
+    fontFamily: "Arial",
+    align: 'center',
+  },
+  h1: {
+    fontSize: 24,
+    fill: "yellow",
+  },
+  p: {
+    fill: "yellow",
+    fontSize: 14,
+  }
+});
+```
+
+### Example 1: Customize BitmapFont options
+
+You can also set things like which characters to generate font glyphs for, or what resolution to use for the texture.
 
 ```typescript
 const myText = new TaggedText(
@@ -64,7 +82,7 @@ const myText = new TaggedText(
 );
 ```
 
-### Example 2: Using file-based fonts
+### Example 3: Using file-based fonts
 
 In this example `h1` will use a file-based font, and `p` will generate a bitmap font.
 
@@ -82,7 +100,7 @@ const myText = new TaggedText(
       align: 'left',
     },
     h1: {
-      fontFamily: 'MyCustomBitmapFont',
+      fontFamily: 'MyCustomBitmapFont', // Set this to the name of the loaded font.
       fontSize: 24,
       fill: "yellow",
     },
@@ -96,11 +114,32 @@ const myText = new TaggedText(
 
 ## Advanced usage
 
-You can manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) fonts (i.e. preload from files, or dynamically generate and cache).
+For more advanced usages, all of the following methods are highly extensible and customizable:
+
+```typescript
+/** Usage: Override the behavior for creating/retrieving bitmap fonts. */
+getOrCreateBitmapFont(style): string | undefined;
+
+/** Usage: Override the caching behavior of bitmap fonts by adjusting how names are calculated. */
+getGeneratedBitmapFontName(style): string;
+
+/** Usage: Override style and options when generating a bitmap font's texture. */
+getConfigForGeneratedBitmapFont(fontName, style): [Partial<PIXI.ITextStyle>, PIXI.IBitmapFontOptions];
+
+/** Usage: Override which PIXI.IBitmapTextStyle attributes are inferred from the PIXI.TextStyle. */
+getDynamicBitmapTextStyleFromTextStyle(style): Partial<PIXI.IBitmapTextStyle>
+```
+
+Or if you want to do everything yourself, and manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) font cache, you can override:
+
+```typescript
+/** Usage: Override whether PIXI.BitmapText or PIXI.Text is generated. */
+createTextField(token, text, style): PIXI.BitmapText | PIXI.Text;
+```
 
 Here are some quick exmaples of how you can use it immediately:
 
-### Example: Custom subclass.
+### Example: Custom Subclass
 
 You can combine some of the above techniques to use a combination of file-based and preloaded.
  
@@ -142,7 +181,8 @@ export class MyTaggedText extends TaggedText {
     // Defaults to 'align', 'fontSize', 'fill' (via `tint`),
     // 'letterSpacing', and 'wordWrapWidth' (via `maxWidth`).
 
-    // Here we are setting it to empty, to never infer PIXI.IBitmapTextStyle attributes.
+    // Here we are setting it to empty, so we *never* infer
+    // PIXI.IBitmapTextStyle attributes from the PIXI.TextStyle.
     return {};
   }
 }
