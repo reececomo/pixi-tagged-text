@@ -16,6 +16,14 @@ It allows you to use [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.Bit
       - `'prefer'` - Uses `PIXI.BitmapFont` if a bitmap font is loaded, falls back to `PIXI.Text`.
       - `'disabled'` - Always uses `PIXI.Text`.
 
+## Installation
+
+Add this to your `package.json` file:
+
+```
+    "pixi-tagged-text": "reececomo/pixi-tagged-text#stable-v2.0.0",
+```
+
 ## Basic usage
 
 ### Example 1: Basic usage
