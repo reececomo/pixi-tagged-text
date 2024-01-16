@@ -41,7 +41,7 @@ const myText = new TaggedText(text, {
 });
 ```
 
-### Example 1: Customize BitmapFont options
+### Example 2: Advanced BitmapFont options
 
 You can also set things like which characters to generate font glyphs for, or what resolution to use for the texture.
 
@@ -82,7 +82,7 @@ const myText = new TaggedText(
 );
 ```
 
-### Example 3: Using file-based fonts
+### Example 3: File-based fonts and generated fonts
 
 In this example `h1` will use a file-based font, and `p` will generate a bitmap font.
 
@@ -112,6 +112,34 @@ const myText = new TaggedText(
 );
 ```
 
+### Example 4: Do not generate fonts.
+
+In this example `h1` will use a file-based font and generate a `PIXI.BitmapText`, and `p` will generate a `PIXI.Text` element.
+
+```typescript
+// Load a .fnt file.
+await Assets.load('fonts/MyCustomBitmapFont.fnt');
+
+// Only use loaded bitmap fonts, don't generate new ones:
+TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR = 'prefer';
+
+const myText = new TaggedText(text, {
+  default: {
+    fontFamily: "Arial",
+    align: 'left',
+  },
+  h1: {
+    fontFamily: 'MyCustomBitmapFont', // Set this to the name of the loaded font.
+    fontSize: 24,
+    fill: "yellow",
+  },
+  p: {
+    fill: "yellow",
+    fontSize: 14,
+  }
+});
+```
+
 ## Advanced usage
 
 For more advanced usages, all of the following methods are highly extensible and customizable:
@@ -130,7 +158,7 @@ getConfigForGeneratedBitmapFont(fontName, style): [Partial<PIXI.ITextStyle>, PIX
 getDynamicBitmapTextStyleFromTextStyle(style): Partial<PIXI.IBitmapTextStyle>
 ```
 
-Or if you want to do everything yourself, and manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) font cache, you can override:
+Or if you want to manage *everything* yourself (i.e. [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) font cache, loading behavior, logging), you can override:
 
 ```typescript
 /** Usage: Override whether PIXI.BitmapText or PIXI.Text is generated. */
