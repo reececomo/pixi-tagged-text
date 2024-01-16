@@ -1,158 +1,158 @@
 # PIXI TaggedText
 
-This project is a fork of [pixi-tagged-text stable v3.14.0](https://nodei.co/npm/pixi-tagged-text/).
+This project is a fork of [pixi-tagged-text stable v3.14.0](https://nodei.co/npm/pixi-tagged-text/) designed to support production-grade projects.
 
-The core addition is that it supports production-level projects by allowing you to use [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.BitmapText.html) as the underlying text element.
-
-Out-of-the-box the `TaggedText` will generate a `PIXI.Text` for each word. For larger blocks of text, this can lead to a very significant performance bottleneck as the main thread is blocked while textures are uploaded to the GPU.
+It allows you to use [PIXI.BitmapText](https://pixijs.download/dev/docs/PIXI.BitmapText.html) as the underlying text element for performance.
 
 ## Differences from [mimshwright/pixi-tagged-text](https://github.com/mimshwright/pixi-tagged-text)
 
+- Adds optional support for generating `PIXI.BitmapText` as the underlying text node.
+  - bitmapFontOptions:
+    - See [PIXI.IBitmapFontOptions](https://pixijs.download/dev/docs/PIXI.IBitmapFontOptions.html).
+    - Defaults to `TaggedText.DEFAULT_BITMAP_FONT_OPTIONS`
+  - bitmapTextBehavior:
+    - Options:
+      - `'always'` - Always uses `PIXI.BitmapText`, generating `PIXI.BitmapFont` if missing.
+      - `'prefer'` - Uses `PIXI.BitmapFont` when a `PIXI.BitmapFont` exists, or uses `PIXI.Text` when none exist.
+      - `'disabled'` - Always uses `PIXI.Text`.
+    - Defaults to `TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR`
+
 - Add support for optionally returning `PIXI.BitmapText` OR `PIXI.Text` in `TaggedText.createTextField(...)`.
 
-## Examples
-
-You will need to manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) fonts (i.e. preload from files, or dynamically generate and cache).
-
-Here are some quick exmaples of how you can use it immediately:
+## Basic usage
 
 ### Example 1: Basic usage
 
+By default, TaggedText will automatically generate and cache BitmapFonts for you.
+
+> Note: Generating fonts dynamically carries some performance overhead as the textures are immediately uploaded to the GPU.
+
 ```typescript
-export class MyTaggedText extends TaggedText {
+const myText = new TaggedText(
+  text,
 
-  /** Override */
-  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
-    // Prefer PIXI.BitmapText. Style is disregarded.
-    return new PIXI.BitmapText(text, { fontName: 'MyCustomBitmapFont' });
-  }
-}
-```
-
-### Example 2: Use PIXI.BitmapText when a PIXI.BitmapFont is loaded
-
-You would preload a font: `Assets.load('assets/fonts/MyBitmapFont.fnt')`, and then utilise it in the following way:
- 
-```typescript
-export class MyTaggedText extends TaggedText {
-
-  /** Override */
-  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText | PIXI.Text {
-    // Use a BitmapText if the given fontFamily is the name of a preloaded BitmapFont.
-    if (typeof style.fontFamily === 'string' && style.fontFamily in BitmapFont.available) {
-      return new PIXI.BitmapText(text, { fontName: style.fontFamily });
+  // TextStyleSet:
+  {
+    default: {
+      fontFamily: "Arial",
+      align: 'center',
+    },
+    h1: {
+      fontSize: 24,
+      fill: "yellow",
+    },
+    p: {
+      fill: "yellow",
+      fontSize: 14,
     }
-    
-    // Everything else, use PIXI.Text.
-    return new PIXI.Text(text, style);
-  }
-}
+  },
+
+  // PIXI.IBitmapFontOptions:
+  {
+    chars: PIXI.BitmapFont.ASCII, // Generate font glyphs for all ASCII characters.
+    resolution: 2,                // Generate HD font glyphs.
+  },
+
+  // BitmapTextBehavior:
+  'always'
+);
 ```
 
-### Example 3: Dynamically generate each PIXI.BitmapFont
+### Example 2: Using file-based fonts
 
-You can dynamically generate fonts like so:
+In this example `h1` will use a file-based font, and `p` will generate a bitmap font.
 
 ```typescript
-export class MyTaggedText extends TaggedText {
+// Load a .fnt file.
+await Assets.load('fonts/MyCustomBitmapFont.fnt');
 
-  /** Override */
-  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
-    const fontName = this._getOrCreateBitmapFont(style);
+const myText = new TaggedText(
+  text,
 
-    return new PIXI.BitmapText(text, { fontName });
-  }
-
-  /**
-   * Generates a new BitmapFont on demand.
-   *
-   * @returns The `fontName` to load in `new PIXI.BitmapText(text, options)`.
-   */
-  private _getOrCreateBitmapFont(style: Partial<PIXI.ITextStyle>): string {
-    // Give the font a unique, deterministic name.
-    const fontName = md5(JSON.stringify(style));
-
-    // Generate, if it doesn't already exist.
-    if (!(fontName in PIXI.BitmapFont.available)) {
-      // 🚨 Caution: This will block the main thread while uploading to the GPU.
-      PIXI.BitmapFont.from(fontName, style);
+  // TextStyleSet:
+  {
+    default: {
+      fontFamily: "Arial",
+      align: 'left',
+    },
+    h1: {
+      fontFamily: 'MyCustomBitmapFont',
+      fontSize: 24,
+      fill: "yellow",
+    },
+    p: {
+      fill: "yellow",
+      fontSize: 14,
     }
-
-    return fontName;
   }
-}
+);
 ```
 
-### Example 4: Advanced generated fonts, dynamic text color, localized character sets, and more.
+## Advanced usage
+
+You can manage your own [PIXI.BitmapFont](https://pixijs.download/dev/docs/PIXI.BitmapFont.html) fonts (i.e. preload from files, or dynamically generate and cache).
+
+Here are some quick exmaples of how you can use it immediately:
+
+### Example: Custom subclass.
 
 You can combine some of the above techniques to use a combination of file-based and preloaded.
  
 ```typescript
 export class MyTaggedText extends TaggedText {
 
-  /** Override */
-  protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PIXI.BitmapText {
-    let fontName: string;
+  /** Override this to force settings for the underlying generated texture. */
+  protected getConfigForGeneratedBitmapFont(
+    fontName: string,
+    style: Partial<PIXI.ITextStyle>
+  ) {
+    let newStyle = { ...style }; // shallow clone
+    
+    // Force generated font size
+    newStyle.fontSize = 64;
 
-    if (typeof style.fontFamily === 'string' && style.fontFamily in BitmapFont.available) {
-      // Prefer an explitly named font if we have preloaded it.
-      // 🚨 Caution: This will disregard most of `style`.
-      fontName = style.fontFamily;
-    }
-    else {
-      // Otherwise, generate on the fly from `style`.
-      fontName = this._getOrCreateBitmapFont(style);
-    }
+    // Generate as white, so we can tint it later.
+    newStyle.fill = 0xFFFFFF;
+    
+    const language = navigator.language || navigator.userLanguage || 'en';
+    
+    return [newStyle, {
+      ...this._bitmapFontOptions,
 
-    return new PIXI.BitmapText(text, {
-      fontName,
-      // Some style attributes can be automatically mapped to pre-generated font, for example
-      // if you wanted to change the color tint, or alignment of a font which was loaded via a file.
-      ...this._mapSupportedDynamicBitmapTextStyles(style),
-    });
+      // Here we are only generating the glyphs needed:
+      chars: Localization.Language.CharSet === 'Latn-Ext-1'
+        ? Localization.Language.CHAR_SET_LATIN_EXT_1
+        : PIXI.BitmapFont.ASCII,
+    }];
   }
 
   /**
-   * Generates a new BitmapFont on demand.
-   *
-   * @returns The `fontName` to load in `new PIXI.BitmapText(text, options)`.
+   * Override this to set which PIXI.IBitmapTextStyle attributes can be
+   * inferred from PIXI.TextStyle attributes.
    */
-  private _getOrCreateBitmapFont(style: Partial<PIXI.ITextStyle>): string {
-    // Give the font a unique, deterministic name.
-    const fontName = md5(JSON.stringify(style));
+  private getDynamicBitmapTextStyleFromTextStyle(
+    style: Partial<PIXI.ITextStyle>
+  ): Partial<PIXI.IBitmapTextStyle> {
+    // Defaults to 'align', 'fontSize', 'fill' (via `tint`),
+    // 'letterSpacing', and 'wordWrapWidth' (via `maxWidth`).
 
-    // Configure advanced font options.
-    // 🚨 Here is where you might support different character sets for different languages. There's
-    //    a myriad of ways to accomplish things like that, so its really up to the level of detail
-    //    your project requires.
-    const bitmapFontOptions: PIXI.IBitmapFontOptions = {
-      chars: PIXI.BitmapFont.ASCII, // Generate font glyphs for ASCII characters.
-      resolution: window.devicePixelRatio, // Generate HD font glyphs.
-      // and many more.
-    };
-
-    // Generate, if it doesn't already exist.
-    if (!(fontName in PIXI.BitmapFont.available)) {
-      // 🚨 Caution: This will block the main thread while uploading to the GPU.
-      PIXI.BitmapFont.from(fontName, style, bitmapFontOptions);
-    }
-
-    return fontName;
-  }
-
-  /**
-   * Some config can be dynamically-set for PIXI.BitmapText from their PIXI.Text equivalents.
-   */
-  private _mapSupportedDynamicBitmapTextStyles(style: Partial<PIXI.ITextStyle>): Partial<PIXI.IBitmapTextStyle> {
-    return {
-      fontSize: typeof style.fontSize === 'number' ? style.fontSize : undefined,
-      letterSpacing: style.letterSpacing ?? 1,
-      maxWidth: style.wordWrapWidth,
-      align: style.align,
-      tint: (typeof style.fill === 'number' || typeof style.fill === 'string') ? style.fill : 0xFFFFFF,
-    };
+    // Here we are setting it to empty, to never infer PIXI.IBitmapTextStyle attributes.
+    return {};
   }
 }
+```
+
+#### More advanced
+
+For more advanced usages, the following methods are highly extensible and customizable:
+
+```typescript
+// TaggedText
+createTextField(token, text, style): PIXI.BitmapText | PIXI.Text;
+getOrCreateBitmapFont(style): string | undefined;
+getGeneratedBitmapFontName(style): string;
+getConfigForGeneratedBitmapFont(fontName, style): [Partial<PIXI.ITextStyle>, PIXI.IBitmapFontOptions];
+getDynamicBitmapTextStyleFromTextStyle(style): Partial<PIXI.IBitmapTextStyle>
 ```
 
 You can do a lot more, but its going to depend on your specific use case.
