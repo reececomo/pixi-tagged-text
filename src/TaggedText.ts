@@ -68,6 +68,32 @@ const DEFAULT_DESTROY_OPTIONS: PIXI.IDestroyOptions = {
   texture: true,
 };
 
+/**
+ * Returns a hash code for an object.
+ *
+ * @see https://stackoverflow.com/a/8831937
+ */
+function _hashCode(value: object): number {
+  const str = JSON.stringify(value, Object.keys(value).sort());
+
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+      const chr = str.charCodeAt(i);
+      hash = (hash << 5) - hash + chr;
+      hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+/**
+ * 'always' - Always uses `PIXI.BitmapText`. Generates missing `PIXI.BitmapFont`.
+ * 'prefer' - Prefers `PIXI.BitmapText` if a `PIXI.BitmapFont` is loaded. Otherwise uses `PIXI.Text`.
+ * 'disabled' - Always uses `PIXI.Text`.
+ *
+ * @see {TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR}
+ */
+type BitmapTextBehavior = 'always' | 'prefer' | 'disabled';
+
 export default class TaggedText extends PIXI.Sprite {
   public static get defaultStyles(): TextStyleSet {
     return DEFAULT_STYLE_SET;
@@ -75,6 +101,24 @@ export default class TaggedText extends PIXI.Sprite {
   public static get defaultOptions(): TaggedTextOptions {
     return DEFAULT_OPTIONS;
   }
+
+  /**
+   * Configurable IBitmapFontOptions
+   */
+  public static DEFAULT_BITMAP_FONT_OPTIONS: PIXI.IBitmapFontOptions = {
+    chars: PIXI.BitmapFont.ASCII, // Generate font glyphs for ASCII characters.
+    resolution: window.devicePixelRatio, // Use HiDPI fonts on HiDPI devices.
+  };
+
+  /**
+   * Behavior for generating bitmap text.
+   */
+  public static DEFAULT_BITMAP_TEXT_BEHAVIOR: BitmapTextBehavior = 'always';
+
+  /** Bitmap font behavior for generated fonts. */
+  private _bitmapFontOptions: PIXI.IBitmapFontOptions;
+  /** Bitmap font behavior for generating fonts. */
+  private _bitmapTextBehavior: BitmapTextBehavior;
 
   /** Settings for the TaggedText component. */
   private _options: TaggedTextOptions;
@@ -310,7 +354,9 @@ export default class TaggedText extends PIXI.Sprite {
     text = "",
     tagStyles: TextStyleSet = {},
     options: TaggedTextOptions = {},
-    texture?: PIXI.Texture
+    bitmapFontOptions?: PIXI.IBitmapFontOptions,
+    bitmapTextBehavior?: BitmapTextBehavior,
+    texture?: PIXI.Texture,
   ) {
     super(texture);
 
@@ -319,6 +365,9 @@ export default class TaggedText extends PIXI.Sprite {
     this._decorationContainer = new PIXI.Container();
     this._debugContainer = new PIXI.Container();
     this._debugGraphics = new PIXI.Graphics();
+
+    this._bitmapFontOptions = bitmapFontOptions ?? TaggedText.DEFAULT_BITMAP_FONT_OPTIONS;
+    this._bitmapTextBehavior = bitmapTextBehavior ?? TaggedText.DEFAULT_BITMAP_TEXT_BEHAVIOR;
 
     this.resetChildren();
 
@@ -690,10 +739,121 @@ export default class TaggedText extends PIXI.Sprite {
 
     return drawing;
   }
+  
+  // ----- Customizable logic for PIXI.BitmapText and PIXI.BitmapFont: -----
 
+  /**
+   * Create a text field for an individual token (word or character).
+   *
+   * By default this generates a `BitmapFont` as necessary.
+   * 
+   *
+   * @see {getOrCreateBitmapFont(style)}
+   * @see {getUniqueNameForGeneratedBitmapFont(style)}
+   * @see {getStyleOverridesForGeneratedBitmapFont(style)}
+   * @see {mapTextStylesToSupportedBitmapTextStyles(style)}
+   */
   protected createTextField(token: TextSegmentToken, text: string, style: Partial<PIXI.ITextStyle>): PixiTextType {
-    return new PIXI.Text(text, style);
+    const fontName = this._bitmapTextBehavior === 'disabled' ? undefined : this.getOrCreateBitmapFont(style);
+
+    if (!fontName) {
+      // Either bitmap text is disabled, or we did not
+      // have a bitmap font loaded for this text section.
+      return new PIXI.Text(text, style);
+    }
+
+    return new PIXI.BitmapText(text, {
+      fontName,
+      // Some style attributes can be automatically mapped to pre-generated font, for example
+      // if you wanted to change the color tint, or alignment of a font which was loaded via a file.
+      ...this.getDynamicBitmapTextStyleFromTextStyle(style),
+    });
   }
+
+  /**
+   * Loads an existing `BitmapFont`.
+   * Generates a new BitmapFont on demand.
+   *
+   * 🚨 Caution: This will block the main thread while uploading to the GPU.
+   *
+   * @returns The `fontName` to be loaded in `new PIXI.BitmapText(text, options)`. Returns undefined if no bitmap font exists and we didn't generate one.
+   */
+  protected getOrCreateBitmapFont(style: Partial<PIXI.ITextStyle>): string | undefined {
+    if (typeof style.fontFamily === 'string') {
+      if (style.fontFamily in PIXI.BitmapFont.available) {
+        // Prefer an explitly named font if we have preloaded it.
+        // 🚨 Caution: This will disregard most of `style`.
+        return style.fontFamily;
+      }
+      else if (this._bitmapTextBehavior === 'prefer') {
+        return undefined;
+      }
+    }
+
+    // Give the font a unique, deterministic name.
+    const fontName = this.getGeneratedBitmapFontName(style);
+
+    // Generate, if it doesn't already exist.
+    if (!(fontName in PIXI.BitmapFont.available)) {
+      const [generatedTextStyle, generatedBitmapFontOptions] = this.getConfigForGeneratedBitmapFont(fontName, style);
+      PIXI.BitmapFont.from(fontName, generatedTextStyle, generatedBitmapFontOptions);
+    }
+
+    return fontName;
+  }
+
+  /**
+   * Get a deterministic, unique name for a generated font.
+   *
+   * By default, generates a semi-unique name based on the given style. Some attributes (specifically
+   * 'align', 'fontSize', 'fill', 'letterSpacing', and 'wordWrapWidth') are not included in the
+   * unique hash as they can be dynamically set in `this.mapTextStylesToSupportedBitmapTextStyles(...)`.
+   * 
+   * @returns e.g. "times-new-roman-53384123"
+   * @see {mapSupportedDynamicBitmapTextStyles()}
+   */
+  protected getGeneratedBitmapFontName(style: Partial<PIXI.ITextStyle>): string {
+    const prefix = typeof style.fontFamily !== 'string' ? 'font' : style.fontFamily.toLowerCase().replace(/[^a-zA-Z0-9_]/gi, '-');
+
+    const strippedAttrs: (keyof PIXI.ITextStyle)[] = ['align', 'fontSize', 'fill', 'letterSpacing', 'wordWrapWidth'];
+    const _style: Partial<PIXI.ITextStyle> = { ...style };
+
+    for (const attr of strippedAttrs) {
+      delete _style[attr];
+    }
+  
+    return `${prefix}-${Math.abs(_hashCode(_style))}`;
+  }
+
+  /**
+   * Use this to set the text style and bitmap font options for a font that is about to be generated.
+   * 
+   * i.e. you may want to force a minimum font size, or set the font color to 'white' so you can tint text later.
+   *
+   * By default, returns the given style, and `TaggedText.DEFAULT_BITMAP_FONT_OPTIONS`.
+   */
+  protected getConfigForGeneratedBitmapFont(fontName: string, style: Partial<PIXI.ITextStyle>): [style: Partial<PIXI.ITextStyle>, bitmapFontOptions: PIXI.IBitmapFontOptions] {
+    return [style, this._bitmapFontOptions];
+  }
+
+  /**
+   * Set which `IBitmapTextStyle` are dynamically configured from the `ITextStyle` on BitmapText, overriding the defaults from `PIXI.BitmapFont`.
+   *
+   * For example if you generated a font at 128px, you might set `{ fontSize: 64 }`.
+   *
+   * By default, the following attributes are automatically mapped to their best equivalents: 'align', 'fontSize', 'fill', 'letterSpacing', and 'wordWrapWidth'.
+   */
+  protected getDynamicBitmapTextStyleFromTextStyle(style: Partial<PIXI.ITextStyle>): Partial<PIXI.IBitmapTextStyle> {
+    return {
+      fontSize: typeof style.fontSize === 'number' ? style.fontSize : undefined,
+      letterSpacing: style.letterSpacing ?? 0,
+      maxWidth: style.wordWrapWidth ?? undefined,
+      align: style.align ?? undefined,
+      tint: (style.fill ?? 0xFFFFFF) as number | undefined, // NOTE: Color types are different in different versions of PIXI 6 and PIXI 7+.
+    };
+  }
+
+  // ----- End: Customizable logic -----
 
   private createTextFieldForToken(token: TextSegmentToken): PixiTextType {
     const { textTransform = "" } = token.style;

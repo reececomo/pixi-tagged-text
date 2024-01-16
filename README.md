@@ -73,9 +73,9 @@ export class MyTaggedText extends TaggedText {
     const fontName = md5(JSON.stringify(style));
 
     // Generate, if it doesn't already exist.
-    if (!(fontName in BitmapFont.available)) {
+    if (!(fontName in PIXI.BitmapFont.available)) {
       // 🚨 Caution: This will block the main thread while uploading to the GPU.
-      BitmapFont.from(fontName, style);
+      PIXI.BitmapFont.from(fontName, style);
     }
 
     return fontName;
@@ -108,7 +108,7 @@ export class MyTaggedText extends TaggedText {
       fontName,
       // Some style attributes can be automatically mapped to pre-generated font, for example
       // if you wanted to change the color tint, or alignment of a font which was loaded via a file.
-      ...this._mapSupportedDynamicBitmapTextStyles(text),
+      ...this._mapSupportedDynamicBitmapTextStyles(style),
     });
   }
 
@@ -126,15 +126,15 @@ export class MyTaggedText extends TaggedText {
     //    a myriad of ways to accomplish things like that, so its really up to the level of detail
     //    your project requires.
     const bitmapFontOptions: PIXI.IBitmapFontOptions = {
-      chars: BitmapFont.ASCII, // Generate font glyphs for ASCII characters.
+      chars: PIXI.BitmapFont.ASCII, // Generate font glyphs for ASCII characters.
       resolution: window.devicePixelRatio, // Generate HD font glyphs.
       // and many more.
     };
 
     // Generate, if it doesn't already exist.
-    if (!(fontName in BitmapFont.available)) {
+    if (!(fontName in PIXI.BitmapFont.available)) {
       // 🚨 Caution: This will block the main thread while uploading to the GPU.
-      BitmapFont.from(fontName, style, bitmapFontOptions);
+      PIXI.BitmapFont.from(fontName, style, bitmapFontOptions);
     }
 
     return fontName;
