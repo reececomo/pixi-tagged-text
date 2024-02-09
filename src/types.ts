@@ -292,7 +292,7 @@ export type StyledTokens = StyledToken;
 //   segments if they contain tags within like "Abso<i>lutely</i>".
 // - When splitStyle is "characters", each character gets its own SegmentToken.
 
-export type SegmentContent = TextToken | SpriteToken;
+export type SegmentContent = TextToken | SpriteToken | ContainerToken;
 export interface SegmentToken {
   content: SegmentContent;
   bounds: Rectangle;

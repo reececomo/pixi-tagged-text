@@ -178,7 +178,7 @@ export interface StyledToken extends CompositeToken<StyledToken | TextToken | Sp
     tags: string;
 }
 export type StyledTokens = StyledToken;
-export type SegmentContent = TextToken | SpriteToken;
+export type SegmentContent = TextToken | SpriteToken | ContainerToken;
 export interface SegmentToken {
     content: SegmentContent;
     bounds: Rectangle;

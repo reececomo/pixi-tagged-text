@@ -735,7 +735,7 @@ export const calculateTokens = (
         });
 
         output = output.concat(textTokens);
-      } else if (token instanceof PIXI.Sprite) {
+      } else if (token instanceof PIXI.Container) {
         const sprite = token;
         const imgDisplay = style[IMG_DISPLAY_PROPERTY];
         // const isBlockImage = imgDisplay === "block";
