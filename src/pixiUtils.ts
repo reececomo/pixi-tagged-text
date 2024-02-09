@@ -43,8 +43,14 @@ export const addChildrenToContainer = (
   container: PIXI.Container
 ): void => children.forEach((child) => container.addChild(child));
 
-export const cloneSprite = (sprite: PIXI.Sprite): PIXI.Sprite =>
-  new PIXI.Sprite(sprite.texture);
+export const cloneSprite = (el: PIXI.Container): PIXI.Container => {
+  if ('clone' in el) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (el as any).clone();
+  }
+
+  return el instanceof PIXI.Sprite ? new PIXI.Sprite(el.texture) : el;
+};
 
 export const fontSizeStringToNumber = (size: string): number => {
   const [valueString, unit] = size.split(/(%|pt|px|r?em)/);

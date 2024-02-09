@@ -162,17 +162,18 @@ export type NewlineToken = "\n";
 export type WhitespaceToken = " " | "\t" | NewlineToken;
 export type TextToken = string;
 export type SpriteToken = PIXI.Sprite;
+export type ContainerToken = PIXI.Container;
 export interface CompositeToken<T extends Token = Token> {
     children: T[];
 }
-export type Token = TextToken | CompositeToken | SpriteToken;
+export type Token = TextToken | CompositeToken | SpriteToken | ContainerToken;
 export type Tokens = CompositeToken;
 export interface TagToken extends CompositeToken<TagToken | TextToken> {
     tag?: TagName;
     attributes?: AttributesList;
 }
 export type TagTokens = TagToken;
-export interface StyledToken extends CompositeToken<StyledToken | TextToken | SpriteToken> {
+export interface StyledToken extends CompositeToken<StyledToken | TextToken | SpriteToken | ContainerToken> {
     style: TextStyleExtended;
     tags: string;
 }

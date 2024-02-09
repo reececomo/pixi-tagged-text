@@ -34,6 +34,7 @@ import {
   VAlign,
   createEmptySegmentToken,
   FontMap,
+  ContainerToken,
 } from "./types";
 
 const ICON_SCALE_BASE = 0.8;
@@ -634,7 +635,7 @@ export const calculateTokens = (
 
   const generateTokensFormStyledToken =
     (style: TextStyleExtended, tags: string) =>
-    (token: StyledToken | TextToken | SpriteToken): SegmentToken[] => {
+    (token: StyledToken | TextToken | SpriteToken | ContainerToken): SegmentToken[] => {
       let output: SegmentToken[] = [];
 
       const alignClassic = convertUnsupportedAlignment(style.align);
