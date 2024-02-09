@@ -217,9 +217,9 @@ export const mapTagsToStyles = (
           `An image tag with ${IMG_REFERENCE_PROPERTY}="${imgKey}" was encountered, but there was no matching sprite in the sprite map. Please include a valid Sprite in the imgMap property in the options in your TaggedText constructor.`
         );
       }
-      if (sprite instanceof PIXI.Sprite === false) {
+      if (sprite instanceof PIXI.Container === false) {
         throw new Error(
-          `The image reference you provided for "${imgKey}" is not a Sprite. The imgMap can only accept PIXI.Sprite instances.`
+          `The image reference you provided for "${imgKey}" is not a Container. The imgMap can only accept PIXI.Container instances.`
         );
       }
 
