@@ -12,7 +12,7 @@ export type Bounds = Rectangle;
 export type Nested<T> = T | Array<Nested<T>>;
 export type SpriteSource = string | PIXI.Texture | HTMLCanvasElement | HTMLVideoElement;
 export type TextureSource = string | HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | PIXI.BaseTexture;
-export type ImageSource = PIXI.Sprite | SpriteSource | TextureSource;
+export type ImageSource = PIXI.Container | SpriteSource | TextureSource;
 export declare const isSpriteSource: (s: ImageSource) => s is SpriteSource;
 export declare const isBaseTexture: (s: ImageSource) => s is PIXI.BaseTexture<PIXI.Resource, PIXI.IAutoDetectOptions>;
 export declare const isImageElement: (s: ImageSource) => s is HTMLImageElement;
@@ -20,7 +20,7 @@ export declare const isTextureSource: (s: ImageSource) => s is TextureSource;
 export type FontProperty = string | number;
 export type FontMap = Record<string, FontProperty>;
 export type ImageSourceMap = Record<string, ImageSource>;
-export type ImageMap = Record<string, PIXI.Sprite>;
+export type ImageMap = Record<string, PIXI.Container>;
 export type SplitStyle = "words" | "characters";
 export type ErrorMessageType = "warning" | "error";
 export interface ErrorMessage {

@@ -25,6 +25,7 @@ import {
   MeasurementUnit,
   Align,
   AlignClassic,
+  ContainerToken,
 } from "./types";
 import { cloneSprite } from "./pixiUtils";
 import * as PIXI from "pixi.js";
@@ -210,7 +211,7 @@ export const mapTagsToStyles = (
           `An image tag with ${IMG_REFERENCE_PROPERTY}="${imgKey}" was encountered, but no imgMap was provided. Please include a valid Sprite in the imgMap property in the options in your TaggedText constructor.`
         );
       }
-      const sprite: SpriteToken | undefined = spriteTemplates[imgKey];
+      const sprite: SpriteToken | ContainerToken | undefined = spriteTemplates[imgKey];
       if (sprite === undefined) {
         throw new Error(
           `An image tag with ${IMG_REFERENCE_PROPERTY}="${imgKey}" was encountered, but there was no matching sprite in the sprite map. Please include a valid Sprite in the imgMap property in the options in your TaggedText constructor.`

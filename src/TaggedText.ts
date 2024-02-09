@@ -487,10 +487,10 @@ export default class TaggedText extends PIXI.Sprite {
       );
       let error: Error | null = null;
 
-      let sprite: PIXI.Sprite = new PIXI.Sprite();
+      let sprite: PIXI.Container = new PIXI.Sprite();
 
       try {
-        if (spriteSource instanceof PIXI.Sprite) {
+        if (spriteSource instanceof PIXI.Container) {
           sprite = spriteSource;
         }
         // if the entry is not a sprite, attempt to load the sprite as if it is a reference to the sprite source (e.g. an Image element, url, or texture).
@@ -511,7 +511,7 @@ export default class TaggedText extends PIXI.Sprite {
         (isSpriteSource(spriteSource) &&
           (spriteSource as PIXI.Texture).baseTexture === null) ||
         (sprite !== undefined &&
-          (sprite.destroyed || sprite.texture?.baseTexture === null))
+          (sprite.destroyed || (sprite instanceof PIXI.Sprite && sprite.texture?.baseTexture === null)))
       ) {
         error = destroyedError;
         console.log(error);
@@ -521,15 +521,17 @@ export default class TaggedText extends PIXI.Sprite {
         throw error;
       }
 
-      // Listen for changes to sprites (e.g. when they load.)
-      const texture = sprite.texture;
+      if (sprite instanceof PIXI.Sprite) {
+        // Listen for changes to sprites (e.g. when they load.)
+        const texture = sprite.texture;
 
-      const onTextureUpdate = (baseTexture: PIXI.BaseTexture) => {
-        this.onImageTextureUpdate(baseTexture);
-        baseTexture.removeListener("update", onTextureUpdate);
-      };
+        const onTextureUpdate = (baseTexture: PIXI.BaseTexture) => {
+          this.onImageTextureUpdate(baseTexture);
+          baseTexture.removeListener("update", onTextureUpdate);
+        };
 
-      texture.baseTexture.addListener("update", onTextureUpdate);
+        texture.baseTexture.addListener("update", onTextureUpdate);
+      }
 
       this.spriteTemplates[key] = sprite;
 

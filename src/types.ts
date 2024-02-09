@@ -33,7 +33,7 @@ export type TextureSource =
   | HTMLVideoElement
   | PIXI.BaseTexture;
 
-export type ImageSource = PIXI.Sprite | SpriteSource | TextureSource;
+export type ImageSource = PIXI.Container | SpriteSource | TextureSource;
 
 export const isSpriteSource = (s: ImageSource): s is SpriteSource =>
   typeof s === "string" ||
@@ -51,7 +51,7 @@ export type FontProperty = string | number;
 export type FontMap = Record<string, FontProperty>;
 
 export type ImageSourceMap = Record<string, ImageSource>;
-export type ImageMap = Record<string, PIXI.Sprite>;
+export type ImageMap = Record<string, PIXI.Container>;
 
 export type SplitStyle = "words" | "characters";
 
