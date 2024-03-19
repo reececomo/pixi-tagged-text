@@ -743,13 +743,13 @@ export const calculateTokens = (
         fontProperties = { ...getFontPropertiesOfText(sizer, true) };
 
         if (isIcon) {
-          const rect = new PIXI.Container();
-          rect.addChild(sprite);
+          const bounds = sprite.getBounds();
+          
 
           // Set to minimum of 1 to avoid devide by zero.
           // if it's height is zero or one it probably hasn't loaded yet.
           // It will get refreshed after it loads.
-          const h = Math.max(rect.height, 1);
+          const h = Math.max(bounds.height, 1);
 
           if (h > 1 && sprite.scale.y === 1) {
             const { iconScale = 1.0 } = style;
@@ -769,8 +769,7 @@ export const calculateTokens = (
         }
 
         // handle images
-        const bounds = new PIXI.Container();
-        bounds.addChild(sprite);
+        const bounds = sprite.getBounds();
 
         const { letterSpacing } = style;
         if (letterSpacing && isIcon) {
