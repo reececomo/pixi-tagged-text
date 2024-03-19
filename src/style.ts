@@ -224,7 +224,7 @@ export const mapTagsToStyles = (
       }
 
       // insert sprite as first token.
-      const cloneOfSprite = cloneSprite(sprite);
+      const cloneOfSprite = sprite; // cloneSprite(sprite);
       styledToken.children = [cloneOfSprite, ...styledToken.children];
     }
 
